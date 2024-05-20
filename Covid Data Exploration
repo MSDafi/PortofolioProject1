@@ -1,0 +1,119 @@
+select
+  location, date, total_cases, new_cases, total_deaths, population
+from
+  `Data_Exploration.CovidDeaths`
+order by
+  1,2;
+
+
+--looking at total cases vs total deaths
+--shows likelihood of dying of you contract covid in Indonesia
+select
+  location, date, total_cases, total_deaths, 
+  (total_deaths/total_cases)*100 as Death_percentage
+from
+  `Data_Exploration.CovidDeaths`
+where
+  location like '%Indonesia%'
+order by
+  1,2
+;
+
+
+--looking at total cases vs population in Indonesia
+--shows what percentage of population got covid in Indonesia
+select
+  location, date, total_cases, population, 
+  (total_cases/population)*100 as Infected_percentage
+from
+  `Data_Exploration.CovidDeaths`
+where
+  location like '%Indonesia%'
+order by
+  1,2;
+
+
+--looking at Countries with highest infection rate compared to population
+select
+  location, population, max(total_cases) as Highest_Infection_Count,  
+  max((total_cases/population)*100) as Percent_Population_Infected
+from
+  `Data_Exploration.CovidDeaths`
+where
+  continent is not null
+--  location like '%Indonesia%'
+group by
+  1,2
+order by
+  Percent_population_Infected desc;
+
+
+--showing continent with highest death count per population
+select
+  location,max(total_deaths) as Total_Deaths_Count,  
+  max((total_deaths/population)*100) as Percent_Population_Deaths
+from
+  `Data_Exploration.CovidDeaths`
+where
+  continent is not null
+group by
+  1
+order by
+  Total_Deaths_Count desc;
+
+
+--LET'S BREAK THINGS DOWN BY CONTINENT
+--showint continent with the highest death count per population
+select
+  location,max(total_deaths) as Total_Deaths_Count,  
+  max((total_deaths/population)*100) as Percent_Population_Deaths
+from
+  `Data_Exploration.CovidDeaths`
+where
+  continent is null
+group by
+  1
+order by
+  Total_Deaths_Count desc;
+
+
+--Global Numbers
+select
+--  date, 
+  sum(new_cases) as total_cases,-- total_deaths,
+  sum(new_deaths) as total_deaths, 
+  (sum(new_deaths)/sum(new_cases))*100 as Death_percentage
+from
+  `Data_Exploration.CovidDeaths`
+where
+  continent is not null
+--group by
+--  1
+order by
+  1,2;
+
+--looking at total population vs vaccinations
+with popvsvac
+as (
+  select
+    dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations,
+    sum(vac.new_vaccinations) over (partition by dea.location order by dea.location,
+    dea.date) as Rolling_People_Vaccinated,
+
+  from
+    `Data_Exploration.CovidDeaths` dea
+    join `Data_Exploration.CovidVaccinations` vac
+      on dea.location = vac.location
+      and dea.date = vac.date
+  where
+    dea.continent is not null
+  order by
+  2,3
+)
+
+select
+  continent, location, date, population, new_vaccinations, Rolling_People_Vaccinated,
+  (Rolling_People_Vaccinated/population)*100 as percent_vaccinated
+from
+  popvsvac
+;
